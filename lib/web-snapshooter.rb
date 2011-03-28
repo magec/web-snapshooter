@@ -8,8 +8,8 @@
 #
 require 'optparse'
 require 'rubygems'
-require 'gtk2'
-require 'gtkmozembed'
+require 'gtk2/base.rb'
+
 require 'uri'
 
 # I use a base class cause I want to implement it with two engines (gecko and webkit)
@@ -62,6 +62,10 @@ class MozSnapshooter < WebSnapshooter
   end
 end
 
+def array_to_dimensions(array)
+  array.join("x")
+end
+
 def dimensions_to_array(dimension)
   aux = dimension.downcase.split("x").map(&:to_i)
   if aux.size == 2 && aux[0] > 0 && aux[1] > 0
@@ -105,6 +109,10 @@ option_parser = OptionParser.new do |opts|
     options[:output_size] = dimensions_to_array(os)
     options[:browser_size] ||= dimensions_to_array(os)
   end
+
+  opts.on("-x", "--xvfb-path PATH", "Path to the Xvfb binary (this is needed if you want to use it without a X server") do  |x|
+    options[:xvfb] = x
+  end
   
 end
 option_parser.parse!
@@ -135,8 +143,17 @@ if options[:output_file].to_s.empty?
   exit 1
 end
 
+xvfb_pid = nil
+if options[:xvfb] 
+  xvfb_pid = spawn("#{options[:xvfb]} :101.10 -screen 10 #{array_to_dimensions(options[:browser_size])}x24 -ac -br  -c -fbdir /var/tmp/ ",:out => "/dev/null",:err => "/dev/null")
+  ENV["DISPLAY"] = ":101.10"
+end
+# We make the require here cause we had to create the X server before
+require 'gtkmozembed'
+sleep 3
 Gtk.init
 MozSnapshooter.new(options)
 Gtk.main
+Process.kill("TERM",xvfb_pid)
 
 
