@@ -1,6 +1,32 @@
 = web-snapshooter
 
-Description goes here.
+== Installation 
+
+First you have to install dependencies
+
+=== Gtk2
+
+  sudo aptitude install libgtk2.0-dev # you have to install gtk2 and its development libraries
+
+  sudo gem install gtk2
+
+=== Gtkmozembed
+
+  sudo aptitude install xulrunner-dev
+
+  sudo gem install gtkmozembed
+
+=== Webkit
+
+  aptitude install libwebkit-dev
+
+  git clone https://github.com/magec/rbwebkitgtk
+
+  cd rbwebkitgtk && ruby extconf.rb && make && sudo make install
+
+== Usage
+
+  
 
 == Contributing to web-snapshooter
  
