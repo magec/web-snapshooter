@@ -18,13 +18,36 @@ First you have to install dependencies
 
 === Webkit
 
-  aptitude install libwebkit-dev
+  sudo aptitude install libwebkit-dev
 
   git clone https://github.com/magec/rbwebkitgtk
 
   cd rbwebkitgtk && ruby extconf.rb && make && sudo make install
 
+=== Web-snapshooter
+
+  git clone git://github.com/magec/web-snapshooter.git  
+
+  cd web-snapshooter && gem build *gemspec && sudo gem install *.gem
+
+=== Xvfb (in case you want to run it without a X server)
+
+  sudo aptitude install xvfb
+
 == Usage
+
+
+  Usage: web-snapshooter [options]
+      -u, --uri URI                    The uri you want to take the spanshot from
+      -e, --engine [webkit|mozilla]    Select the engine to be used (default is webkit)
+      -f, --force                      Overwrite output
+      -o, --output-file FILE           The output file
+          --browser-size WIDTHxHEIGHT
+                                       The size of the 'fake' browser that is going to be used to capture the snapshot, if not specified the output size will be used instead
+          --output-size WIDTHxHEIGHT
+                                     The size of the output file, if not specified the browser size will be used instead
+      -x, --xvfb                       Use xvfb-run (this is needed if you have no X server or don't want to use it)
+      -t, --timeout TIMEOUT            timeout for the request
 
   
 
