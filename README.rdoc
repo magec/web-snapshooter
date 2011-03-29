@@ -2,7 +2,7 @@
 
 == Introduction
 
-  With web-snapshooter you can make those web-thumnails you always dreamed of. It allows to specify the browser size and the output size. It permits both jpg and png and 2 different engines (mozilla and webkit). You can also use it without the need of an X server, if you have installed xvfb it will take care of the creation of a dummy server where the render can be done.
+With web-snapshooter you can make those web-thumnails you always dreamed of. It allows to specify the browser size and the output size. It permits both jpg and png and 2 different engines (mozilla and webkit). You can also use it without the need of an X server, if you have installed xvfb it will take care of the creation of a dummy server where the render can be done.
 
 == Installation 
 
