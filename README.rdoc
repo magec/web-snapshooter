@@ -1,5 +1,9 @@
 = web-snapshooter
 
+== Introduction
+
+  With web-snapshooter you can make those web-thumnails you always dreamed of. It allows to specify the browser size and the output size. It permits both jpg and png and 2 different engines (mozilla and webkit). You can also use it without the need of an X server, if you have installed xvfb it will take care of the creation of a dummy server where the render can be done.
+
 == Installation 
 
 First you have to install dependencies
@@ -7,21 +11,17 @@ First you have to install dependencies
 === Gtk2
 
   sudo aptitude install libgtk2.0-dev # you have to install gtk2 and its development libraries
-
   sudo gem install gtk2
 
 === Gtkmozembed
 
   sudo aptitude install xulrunner-dev
-
   sudo gem install gtkmozembed
 
 === Webkit
 
   sudo aptitude install libwebkit-dev
-
   git clone https://github.com/magec/rbwebkitgtk
-
   cd rbwebkitgtk && ruby extconf.rb && make && sudo make install
 
 === Web-snapshooter
