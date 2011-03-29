@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+B1;2403;0c#!/usr/bin/env ruby
 #
 # WebSnapShooter
 #
@@ -163,8 +163,12 @@ if options[:output_file].to_s.empty?
   exit 1
 end
 
-if options[:xvfb] 
-  exec("xvfb-run --server-args=\"-screen 0 #{array_to_dimensions(options[:browser_size])}x24\" " + __FILE__ + " " + (ARGS - ["-x"]).join(" "),:err => "/dev/null",:out => "/dev/null")
+if options[:xvfb]
+  if RUBY_VERSION < '1.9'
+    exec("xvfb-run --server-args=\"-screen 0 #{array_to_dimensions(options[:browser_size])}x24\" " + __FILE__ + " " + (ARGS - ["-x"]).join(" ") + "> /dev/null 2>&1")
+  else
+    exec("xvfb-run --server-args=\"-screen 0 #{array_to_dimensions(options[:browser_size])}x24\" " + __FILE__ + " " + (ARGS - ["-x"]).join(" "),:err => "/dev/null",:out => "/dev/null")
+  end
 end
 
 # We make the require here cause we had to create the X server before
