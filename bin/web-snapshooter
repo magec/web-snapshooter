@@ -29,18 +29,27 @@ class WebSnapshooter < Gtk::Window
   end
 
   def screenshot
-    puts "Screenshooting"
     gdkw = self.child.parent_window
     x, y, width, height, depth = gdkw.geometry
     width -= 16
     pixbuf = Gdk::Pixbuf.from_drawable(nil, gdkw, 0, 0, width, height)
-    pixbuf = pixbuf.scale(@options[:output_size][0], @options[:output_size][1], Gdk::Pixbuf::INTERP_HYPER)
+    if @options[:output_size][0] != @options[:browser_size][0] || @options[:output_size][1] != @options[:browser_size][1]
+      pixbuf = pixbuf.scale(@options[:output_size][0], @options[:output_size][1], Gdk::Pixbuf::INTERP_HYPER)
+    end
     if @options[:output_file].split(".").last == "jpeg" || @options[:output_file].split(".").last == "jpg"
       pixbuf.save(@options[:output_file],"jpeg")
     else
       pixbuf.save(@options[:output_file],"png")
     end
   end
+
+  def on_net_stop
+    Gtk::timeout_add(1000) do
+      screenshot
+      Gtk.main_quit
+    end
+  end
+
 
 end
 
@@ -50,6 +59,7 @@ class WebkitSnapshooter < WebSnapshooter
     self << Gtk::WebKit::WebView.new
     self.child.set_size_request(@options[:browser_size][0], @options[:browser_size][1])
     self.child.open(@options[:uri])
+    self.child.signal_connect("load_finished") { on_net_stop }
     self.show_all
   end
 end
@@ -64,13 +74,6 @@ class MozSnapshooter < WebSnapshooter
     self.child.signal_connect("net_stop") { on_net_stop }
     self.child.location = @options[:uri]
     self.show_all
-  end
-
-  def on_net_stop
-    Gtk::timeout_add(1000) do
-      screenshot
-      Gtk.main_quit
-    end
   end
 
 end
@@ -165,10 +168,14 @@ if options[:xvfb]
 end
 
 # We make the require here cause we had to create the X server before
-require 'gtkmozembed'
-require 'webkit'
+if options[:engine] == "mozilla"
+  require 'gtkmozembed'
+  snapshooter  = MozSnapshooter.new(options)
+else
+  require 'webkit'
+  snapshooter  = WebkitSnapshooter.new(options)
+end
 Gtk.init
-snapshooter = options[:engine] == "mozilla" ? MozSnapshooter.new(options) : WebkitSnapshooter.new(options)
 
 if options[:timeout]
   Gtk::timeout_add(options[:timeout]*1000) do
