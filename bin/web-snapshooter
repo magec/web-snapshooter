@@ -9,9 +9,10 @@
 require 'optparse'
 require 'rubygems'
 require 'gtk2/base.rb'
-
+require 'timeout'
 require 'uri'
 
+ARGS = ARGV.clone
 # I use a base class cause I want to implement it with two engines (gecko and webkit)
 class WebSnapshooter < Gtk::Window
   
@@ -23,15 +24,39 @@ class WebSnapshooter < Gtk::Window
   def initialize(options)
     super()
     @options = options
+    self.border_width = 0
+    self.resize(@options[:browser_size][0], @options[:browser_size][1])
   end
 
+  def screenshot
+    puts "Screenshooting"
+    gdkw = self.child.parent_window
+    x, y, width, height, depth = gdkw.geometry
+    width -= 16
+    pixbuf = Gdk::Pixbuf.from_drawable(nil, gdkw, 0, 0, width, height)
+    pixbuf = pixbuf.scale(@options[:output_size][0], @options[:output_size][1], Gdk::Pixbuf::INTERP_HYPER)
+    if @options[:output_file].split(".").last == "jpeg" || @options[:output_file].split(".").last == "jpg"
+      pixbuf.save(@options[:output_file],"jpeg")
+    else
+      pixbuf.save(@options[:output_file],"png")
+    end
+  end
+
+end
+
+class WebkitSnapshooter < WebSnapshooter
+  def initialize(opts)
+    super
+    self << Gtk::WebKit::WebView.new
+    self.child.set_size_request(@options[:browser_size][0], @options[:browser_size][1])
+    self.child.open(@options[:uri])
+    self.show_all
+  end
 end
 
 class MozSnapshooter < WebSnapshooter
   def initialize(opts)
     super
-    self.border_width = 0
-    self.resize(@options[:browser_size][0], @options[:browser_size][1])
     Gtk::MozEmbed.set_profile_path(ENV['HOME'] + '.mozilla', 'RubyGecko')
     self << Gtk::MozEmbed.new
     self.child.chrome_mask = Gtk::MozEmbed::ALLCHROME
@@ -48,18 +73,6 @@ class MozSnapshooter < WebSnapshooter
     end
   end
 
-  def screenshot
-    gdkw = self.child.parent_window
-    x, y, width, height, depth = gdkw.geometry
-    width -= 16
-    pixbuf = Gdk::Pixbuf.from_drawable(nil, gdkw, 0, 0, width, height)
-    pixbuf = pixbuf.scale(@options[:output_size][0], @options[:output_size][1], Gdk::Pixbuf::INTERP_HYPER)
-    if @options[:output_file].split(".").last == "jpeg" || @options[:output_file].split(".").last == "jpg"
-      pixbuf.save(@options[:output_file],"jpeg")
-    else
-      pixbuf.save(@options[:output_file],"png")
-    end
-  end
 end
 
 def array_to_dimensions(array)
@@ -75,14 +88,10 @@ def dimensions_to_array(dimension)
   end
 end
 
-options = {}
+options = {:engine => "webkit"}
 option_parser = OptionParser.new do |opts|
   opts.banner = "Usage: web-snapshooter [options]"
   
-  opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
-    options[:verbose] = v
-  end
-
   opts.on("-u", "--uri URI", "The uri you want to take the spanshot from") do |u|
     options[:uri] = u
     begin
@@ -90,6 +99,10 @@ option_parser = OptionParser.new do |opts|
     rescue URI::InvalidURIError
       puts "Invalid uri specified"
     end
+  end
+
+  opts.on("-e", "--engine [webkit|mozilla]" , "Select the engine to be used (default is webkit)") do |e|
+    options[:engine] = e
   end
 
   opts.on("-f","--force", "Overwrite output") do |f|
@@ -110,8 +123,12 @@ option_parser = OptionParser.new do |opts|
     options[:browser_size] ||= dimensions_to_array(os)
   end
 
-  opts.on("-x", "--xvfb-path PATH", "Path to the Xvfb binary (this is needed if you want to use it without a X server") do  |x|
-    options[:xvfb] = x
+  opts.on("-x", "--xvfb", "Use xvfb-run (this is needed if you have no X server or don't want to use it)") do  |x|
+    options[:xvfb] = true
+  end
+
+  opts.on("-t", "--timeout TIMEOUT", "timeout for the request") do |t|
+    options[:timeout] = t.to_i
   end
   
 end
@@ -143,17 +160,23 @@ if options[:output_file].to_s.empty?
   exit 1
 end
 
-xvfb_pid = nil
 if options[:xvfb] 
-  xvfb_pid = spawn("#{options[:xvfb]} :101.10 -screen 10 #{array_to_dimensions(options[:browser_size])}x24 -ac -br  -c -fbdir /var/tmp/ ",:out => "/dev/null",:err => "/dev/null")
-  ENV["DISPLAY"] = ":101.10"
+  exec("xvfb-run --server-args=\"-screen 0 #{array_to_dimensions(options[:browser_size])}x24\" " + __FILE__ + " " + (ARGS - ["-x"]).join(" "),:err => "/dev/null",:out => "/dev/null")
 end
+
 # We make the require here cause we had to create the X server before
 require 'gtkmozembed'
-sleep 3
+require 'webkit'
 Gtk.init
-MozSnapshooter.new(options)
+snapshooter = options[:engine] == "mozilla" ? MozSnapshooter.new(options) : WebkitSnapshooter.new(options)
+
+if options[:timeout]
+  Gtk::timeout_add(options[:timeout]*1000) do
+    snapshooter.screenshot
+    Gtk.main_quit
+  end
+end
+
 Gtk.main
-Process.kill("TERM",xvfb_pid)
 
 
