@@ -29,6 +29,7 @@ class WebSnapshooter < Gtk::Window
   end
 
   def screenshot
+    sleep @options[:delay] if @options[:delay]
     gdkw = self.child.parent_window
     x, y, width, height, depth = gdkw.geometry
     width -= 16
@@ -104,6 +105,10 @@ option_parser = OptionParser.new do |opts|
     end
   end
 
+  opts.on("-d", "--delay SECS", "How long do you want to wait until the snapshot is made (note that this delay is after the timeout or the page load)") do |d|
+    options[:delay] = d.to_i
+  end
+  
   opts.on("-e", "--engine [webkit|mozilla]" , "Select the engine to be used (default is webkit)") do |e|
     options[:engine] = e
   end
@@ -165,9 +170,10 @@ end
 
 
 def make_args_from_options(opts)
-  aux = " --uri='#{opts[:uri]}' --output-size=#{array_to_dimensions(opts[:output_size])} --browser-size=#{array_to_dimensions(opts[:browser_size])} --output-file=#{opts[:output_file]} --engine=#{opts[:engine]} "
+  aux = " --uri='#{opts[:uri]}' --output-size=#{array_to_dimensions(opts[:output_size])} --browser-size=#{array_to_dimensions(opts[:browser_size])} --output-file=#{opts[:output_file]} --engine=#{opts[:engine]}"
   aux += opts[:force] ? " -f " : ""
   aux += opts[:timeout] ? " --timeout=#{opts[:timeout]} " : ""
+  aux += opts[:delay] ? " --delay=#{opts[:delay]} " : ""
   return aux
 end
 
