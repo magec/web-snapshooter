@@ -163,11 +163,20 @@ if options[:output_file].to_s.empty?
   exit 1
 end
 
+
+def make_args_from_options(opts)
+  aux = " --uri='#{opts[:uri]}' --output-size=#{array_to_dimensions(opts[:output_size])} --browser-size=#{array_to_dimensions(opts[:browser_size])} --output-file=#{opts[:output_file]} --engine=#{opts[:engine]} "
+  aux += opts[:force] ? " -f " : ""
+  aux += opts[:timeout] ? " --timeout=#{opts[:timeout]} " : ""
+  return aux
+end
+
 if options[:xvfb]
+  command = "xvfb-run --server-args=\"-screen 0 #{array_to_dimensions(options[:browser_size])}x24\" " + __FILE__ + make_args_from_options(options)
   if RUBY_VERSION < '1.9'
-    exec("xvfb-run --server-args=\"-screen 0 #{array_to_dimensions(options[:browser_size])}x24\" " + __FILE__ + " " + (ARGS - ["-x"]).join(" ") + "> /dev/null 2>&1")
+    exec(command + "> /dev/null 2>&1")
   else
-    exec("xvfb-run --server-args=\"-screen 0 #{array_to_dimensions(options[:browser_size])}x24\" " + __FILE__ + " " + (ARGS - ["-x"]).join(" "),:err => "/dev/null",:out => "/dev/null")
+    exec(command,:err => "/dev/null",:out => "/dev/null")
   end
 end
 
