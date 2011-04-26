@@ -178,7 +178,7 @@ def make_args_from_options(opts)
 end
 
 if options[:xvfb]
-  command = "xvfb-run --server-args=\"-screen 0 #{array_to_dimensions(options[:browser_size])}x24\" " + __FILE__ + make_args_from_options(options)
+  command = "xvfb-run -a --server-args=\"-screen 0 #{array_to_dimensions(options[:browser_size])}x24\" " + __FILE__ + make_args_from_options(options)
   if RUBY_VERSION < '1.9'
     exec(command + "> /dev/null 2>&1")
   else
