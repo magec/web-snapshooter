@@ -65,20 +65,6 @@ class WebkitSnapshooter < WebSnapshooter
   end
 end
 
-class MozSnapshooter < WebSnapshooter
-  def initialize(opts)
-    super
-    Gtk::MozEmbed.set_profile_path(ENV['HOME'] + '.mozilla', 'RubyGecko')
-    self << Gtk::MozEmbed.new
-    self.child.chrome_mask = Gtk::MozEmbed::ALLCHROME
-    self.child.set_size_request(@options[:browser_size][0], @options[:browser_size][1])
-    self.child.signal_connect("net_stop") { on_net_stop }
-    self.child.location = @options[:uri]
-    self.show_all
-  end
-
-end
-
 def array_to_dimensions(array)
   array.join("x")
 end
@@ -109,10 +95,6 @@ option_parser = OptionParser.new do |opts|
     options[:delay] = d.to_i
   end
   
-  opts.on("-e", "--engine [webkit|mozilla]" , "Select the engine to be used (default is webkit)") do |e|
-    options[:engine] = e
-  end
-
   opts.on("-f","--force", "Overwrite output") do |f|
     options[:force] = true
   end
@@ -170,7 +152,7 @@ end
 
 
 def make_args_from_options(opts)
-  aux = " --uri='#{opts[:uri]}' --output-size=#{array_to_dimensions(opts[:output_size])} --browser-size=#{array_to_dimensions(opts[:browser_size])} --output-file=#{opts[:output_file]} --engine=#{opts[:engine]}"
+  aux = " --uri='#{opts[:uri]}' --output-size=#{array_to_dimensions(opts[:output_size])} --browser-size=#{array_to_dimensions(opts[:browser_size])} --output-file=#{opts[:output_file]}"
   aux += opts[:force] ? " -f " : ""
   aux += opts[:timeout] ? " --timeout=#{opts[:timeout]} " : ""
   aux += opts[:delay] ? " --delay=#{opts[:delay]} " : ""
@@ -187,13 +169,8 @@ if options[:xvfb]
 end
 
 # We make the require here cause we had to create the X server before
-if options[:engine] == "mozilla"
-  require 'gtkmozembed'
-  snapshooter  = MozSnapshooter.new(options)
-else
-  require 'webkit'
-  snapshooter  = WebkitSnapshooter.new(options)
-end
+require 'webkit'
+snapshooter  = WebkitSnapshooter.new(options)
 Gtk.init
 
 if options[:timeout]
