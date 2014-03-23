@@ -8,7 +8,7 @@
 #
 require 'optparse'
 require 'rubygems'
-require 'gtk2/base.rb'
+require 'webkit-gtk'
 require 'timeout'
 require 'uri'
 
@@ -25,27 +25,33 @@ class WebSnapshooter < Gtk::Window
     super()
     @options = options
     self.border_width = 0
-    self.resize(@options[:browser_size][0], @options[:browser_size][1])
+    self.resize(@options[:browser_size][0], @options[:browser_size][1]) if @options[:browser_size]
   end
 
   def screenshot
     sleep @options[:delay] if @options[:delay]
     gdkw = self.child.parent_window
     x, y, width, height, depth = gdkw.geometry
-    width -= 16
-    pixbuf = Gdk::Pixbuf.from_drawable(nil, gdkw, 0, 0, width, height)
-    if @options[:output_size][0] != @options[:browser_size][0] || @options[:output_size][1] != @options[:browser_size][1]
-      pixbuf = pixbuf.scale(@options[:output_size][0], @options[:output_size][1], Gdk::Pixbuf::INTERP_HYPER)
+    cairo_context = gdkw.create_cairo_context
+    surface = cairo_context.target
+    if @options[:output_size]
+      surface = scale(surface, gdkw.width, gdkw.height, @options[:output_size][0], @options[:output_size][1])
     end
-    if @options[:output_file].split(".").last == "jpeg" || @options[:output_file].split(".").last == "jpg"
-      pixbuf.save(@options[:output_file],"jpeg")
-    else
-      pixbuf.save(@options[:output_file],"png")
-    end
+    surface.write_to_png(@options[:output_file])
+  end
+
+
+  def scale(surface, source_width, source_height, target_width, target_height)
+    new_surface = surface.create_similar(target_width, target_height)
+    cairo_context = Cairo::Context.new(new_surface)
+    cairo_context.scale(target_width.to_f / source_width, target_height.to_f / source_height)
+    cairo_context.set_source(surface)
+    cairo_context.paint
+    return new_surface
   end
 
   def on_net_stop
-    Gtk::timeout_add(1000) do
+    GLib::Timeout.add(1000) do
       screenshot
       Gtk.main_quit
     end
@@ -57,10 +63,15 @@ end
 class WebkitSnapshooter < WebSnapshooter
   def initialize(opts)
     super
-    self << Gtk::WebKit::WebView.new
-    self.child.set_size_request(@options[:browser_size][0], @options[:browser_size][1])
+    self << WebKitGtk::WebView.new
+    if @options[:browser_size]
+      self.set_default_size(@options[:browser_size][0], @options[:browser_size][1])
+    end
     self.child.open(@options[:uri])
-    self.child.signal_connect("load_finished") { on_net_stop }
+    self.child.signal_connect("load_finished") do
+      on_net_stop     
+    end
+
     self.show_all
   end
 end
@@ -103,14 +114,12 @@ option_parser = OptionParser.new do |opts|
     options[:output_file] = o
   end
 
-  opts.on("", "--browser-size WIDTHxHEIGHT", "The size of the 'fake' browser that is going to be used to capture the snapshot, if not specified the output size will be used instead") do |bs|
+  opts.on("", "--browser-size WIDTHxHEIGHT", "The size of the 'fake' browser that is going to be used to capture the snapshot, if not specified auto resize will be used instead") do |bs|
     options[:browser_size] = dimensions_to_array(bs)
-    options[:output_size]  = dimensions_to_array(bs)
   end
 
   opts.on("", "--output-size WIDTHxHEIGHT", "The size of the output file, if not specified the browser size will be used instead") do |os|
     options[:output_size] = dimensions_to_array(os)
-    options[:browser_size] ||= dimensions_to_array(os)
   end
 
   opts.on("-x", "--xvfb", "Use xvfb-run (this is needed if you have no X server or don't want to use it)") do  |x|
@@ -132,12 +141,6 @@ begin
 rescue Errno::ENOENT
 end
 
-if options[:output_size].to_s.empty?
-  puts "Error, an output_size has to be specified" 
-  puts option_parser.help
-  exit 1
-end
-
 if options[:uri].to_s.empty?
   puts "Error, no uri specified"
   puts option_parser.help 
@@ -152,7 +155,9 @@ end
 
 
 def make_args_from_options(opts)
-  aux = " --uri='#{opts[:uri]}' --output-size=#{array_to_dimensions(opts[:output_size])} --browser-size=#{array_to_dimensions(opts[:browser_size])} --output-file=#{opts[:output_file]}"
+  aux = " --uri='#{opts[:uri]}' --output-file=#{opts[:output_file]}"
+  aux += opts[:output_size] ? " --output-size=#{array_to_dimensions(opts[:output_size])}" : ""
+  aux += opts[:browser_size] ? "--browser-size=#{array_to_dimensions(opts[:browser_size])}" : ""
   aux += opts[:force] ? " -f " : ""
   aux += opts[:timeout] ? " --timeout=#{opts[:timeout]} " : ""
   aux += opts[:delay] ? " --delay=#{opts[:delay]} " : ""
@@ -160,16 +165,15 @@ def make_args_from_options(opts)
 end
 
 if options[:xvfb]
-  command = "xvfb-run -a --server-args=\"-screen 0 #{array_to_dimensions(options[:browser_size])}x24\" " + __FILE__ + make_args_from_options(options)
+  command = "xvfb-run -a --server-args=\"-screen 0 10000x10000x24\" " + __FILE__ + make_args_from_options(options)
   if RUBY_VERSION < '1.9'
-    exec(command + "> /dev/null 2>&1")
+    exec(command)# + "> /dev/null 2>&1")
   else
-    exec(command,:err => "/dev/null",:out => "/dev/null")
+    exec(command)#,:err => "/dev/null",:out => "/dev/null")
   end
 end
 
 # We make the require here cause we had to create the X server before
-require 'webkit'
 snapshooter  = WebkitSnapshooter.new(options)
 Gtk.init
 
