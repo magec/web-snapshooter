@@ -2,20 +2,22 @@
 #
 # WebSnapShooter
 #
-# Copyright (C) 2011 Jose Fernandez 
-# 
+# Copyright (C) 2011 Jose Fernandez
+#
 # Based in some code from Mirko Maischberger
 #
 require 'optparse'
 require 'rubygems'
+begin
 require 'webkit-gtk'
+rescue Gtk::InitError
+end
 require 'timeout'
 require 'uri'
 
 ARGS = ARGV.clone
 # I use a base class cause I want to implement it with two engines (gecko and webkit)
 class WebSnapshooter < Gtk::Window
-  
   # It receives a hash with the different options
   # :uri          => The uri that is going to be rendered
   # :browser_size => An array with the browser size [width,height]
@@ -69,7 +71,7 @@ class WebkitSnapshooter < WebSnapshooter
     end
     self.child.open(@options[:uri])
     self.child.signal_connect("load_finished") do
-      on_net_stop     
+      on_net_stop
     end
 
     self.show_all
@@ -92,7 +94,7 @@ end
 options = {:engine => "webkit"}
 option_parser = OptionParser.new do |opts|
   opts.banner = "Usage: web-snapshooter [options]"
-  
+
   opts.on("-u", "--uri URI", "The uri you want to take the spanshot from") do |u|
     options[:uri] = u
     begin
@@ -105,7 +107,7 @@ option_parser = OptionParser.new do |opts|
   opts.on("-d", "--delay SECS", "How long do you want to wait until the snapshot is made (note that this delay is after the timeout or the page load)") do |d|
     options[:delay] = d.to_i
   end
-  
+
   opts.on("-f","--force", "Overwrite output") do |f|
     options[:force] = true
   end
@@ -129,7 +131,7 @@ option_parser = OptionParser.new do |opts|
   opts.on("-t", "--timeout TIMEOUT", "timeout for the request") do |t|
     options[:timeout] = t.to_i
   end
-  
+
 end
 option_parser.parse!
 
@@ -143,13 +145,13 @@ end
 
 if options[:uri].to_s.empty?
   puts "Error, no uri specified"
-  puts option_parser.help 
+  puts option_parser.help
   exit 1
 end
 
 if options[:output_file].to_s.empty?
   puts "An ouput file has to be specified"
-  puts option_parser.help 
+  puts option_parser.help
   exit 1
 end
 
@@ -185,5 +187,3 @@ if options[:timeout]
 end
 
 Gtk.main
-
-
