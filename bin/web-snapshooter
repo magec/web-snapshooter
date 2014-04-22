@@ -171,11 +171,7 @@ def make_args_from_options(opts)
 end
 
 if options[:xvfb]
-<<<<<<< HEAD
   default_size = default_size_form_options(options) || [1000,1000]
-=======
-  default_size = default_size_from_options(options) || [1000,1000]
->>>>>>> f04f58a42cf96b268e1155937507e82f148ec0c9
   command = "xvfb-run -a --server-args=\"-screen 0 #{array_to_dimensions(default_size)}x24\" " + __FILE__ + make_args_from_options(options)
   if RUBY_VERSION < '1.9'
     exec(command)# + "> /dev/null 2>&1")
