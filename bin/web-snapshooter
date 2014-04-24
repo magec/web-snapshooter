@@ -185,7 +185,7 @@ snapshooter  = WebkitSnapshooter.new(options)
 Gtk.init
 
 if options[:timeout]
-  Gtk::timeout_add(options[:timeout]*1000) do
+  GLib::Timeout.add(options[:timeout]*1000) do
     snapshooter.screenshot
     Gtk.main_quit
   end
